@@ -1,0 +1,177 @@
+name: Update Homebrew Formula
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'GitHub repository (e.g., tuannvm/mcp-trino)'
+        required: true
+        default: 'tuannvm/mcp-trino'
+      formula:
+        description: 'Formula file name (e.g., mcp-trino.rb)'
+        required: true
+        default: 'mcp-trino.rb'
+  repository_dispatch:
+    types: [update-formula]
+  release:
+    types: [published]  # Trigger on new releases
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Needed for pushing changes
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.0'
+          bundler-cache: true
+
+      - name: Determine repository and formula
+        id: determine-info
+        run: |
+          # For workflow_dispatch, use provided inputs
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            GITHUB_REPO="${{ github.event.inputs.repository }}"
+            FORMULA_FILE="${{ github.event.inputs.formula }}"
+          
+          # For repository_dispatch, use provided data if available
+          elif [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
+            GITHUB_REPO="${{ github.event.client_payload.repository || 'tuannvm/mcp-trino' }}"
+            FORMULA_FILE="${{ github.event.client_payload.formula || 'mcp-trino.rb' }}"
+          
+          # For release event, determine from release repository
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            GITHUB_REPO="${{ github.repository }}"
+            # Extract the package name from repository (e.g., mcp-trino from tuannvm/mcp-trino)
+            PACKAGE_NAME=$(echo "$GITHUB_REPO" | cut -d'/' -f2)
+            FORMULA_FILE="${PACKAGE_NAME}.rb"
+          fi
+          
+          echo "GITHUB_REPO=$GITHUB_REPO" >> $GITHUB_ENV
+          echo "FORMULA_FILE=$FORMULA_FILE" >> $GITHUB_ENV
+          echo "Repository: $GITHUB_REPO, Formula: $FORMULA_FILE"
+          
+          # Extract the package name without .rb extension
+          PACKAGE_NAME=$(basename "$FORMULA_FILE" .rb)
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_ENV
+          echo "Package name: $PACKAGE_NAME"
+
+      - name: Get latest release info
+        id: release
+        uses: pozetroninc/github-action-get-latest-release@master
+        with:
+          repository: ${{ env.GITHUB_REPO }}
+          excludes: prerelease, draft
+
+      - name: Set version
+        id: version
+        run: |
+          # Remove 'v' prefix if present
+          VERSION="${{ steps.release.outputs.release }}"
+          VERSION="${VERSION#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Version: $VERSION"
+
+      - name: Download release assets and calculate SHA256
+        run: |
+          mkdir -p tmp
+          cd tmp
+          
+          # Define platforms and architectures
+          PLATFORMS=("darwin" "linux")
+          ARCHES=("amd64" "arm64")
+          
+          # Download each asset and calculate SHA256
+          for PLATFORM in "${PLATFORMS[@]}"; do
+            for ARCH in "${ARCHES[@]}"; do
+              # Try different naming patterns until one works
+              PATTERNS=(
+                "${PACKAGE_NAME}_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
+                "${PACKAGE_NAME}-${VERSION}-${PLATFORM}-${ARCH}.tar.gz"
+                "${PACKAGE_NAME}-${PLATFORM}-${ARCH}.tar.gz"
+              )
+              
+              for FILENAME in "${PATTERNS[@]}"; do
+                DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/${FILENAME}"
+                echo "Trying: $DOWNLOAD_URL"
+                
+                if curl -L -f -o "$FILENAME" "$DOWNLOAD_URL"; then
+                  SHA=$(sha256sum "$FILENAME" | cut -d ' ' -f 1)
+                  echo "${PLATFORM}_${ARCH}_SHA=$SHA" >> $GITHUB_ENV
+                  echo "${PLATFORM}_${ARCH}_FILENAME=$FILENAME" >> $GITHUB_ENV
+                  echo "$PLATFORM $ARCH SHA: $SHA (File: $FILENAME)"
+                  break  # Found a working pattern, break the loop
+                else
+                  echo "Pattern $FILENAME not found"
+                fi
+              done
+            done
+          done
+
+      - name: Check if formula exists
+        id: check-formula
+        run: |
+          if [ -f "${{ env.FORMULA_FILE }}" ]; then
+            echo "FORMULA_EXISTS=true" >> $GITHUB_ENV
+            echo "Formula file ${{ env.FORMULA_FILE }} exists"
+          else
+            echo "FORMULA_EXISTS=false" >> $GITHUB_ENV
+            echo "::warning::Formula file ${{ env.FORMULA_FILE }} does not exist"
+          fi
+
+      - name: Update formula
+        if: env.FORMULA_EXISTS == 'true'
+        run: |
+          # Read the formula file
+          FORMULA_CONTENT=$(cat ${FORMULA_FILE})
+          
+          # Update version
+          FORMULA_CONTENT=$(echo "$FORMULA_CONTENT" | sed -E "s/version \"[0-9.]+\"/version \"${VERSION}\"/g")
+          
+          # Function to update SHA for a platform/arch
+          update_sha() {
+            local platform=$1
+            local arch=$2
+            local sha_var="${platform}_${arch}_SHA"
+            local filename_var="${platform}_${arch}_FILENAME"
+            
+            if [ -n "${!sha_var}" ]; then
+              # Try to match the URL pattern for this platform/arch and replace SHA
+              pattern="url.*${platform}.*${arch}.*tar\.gz.*sha256.*\"[a-fA-F0-9]+\""
+              replacement="url \"https://github.com/${GITHUB_REPO}/releases/latest/download/${!filename_var}\"\n      sha256 \"${!sha_var}\""
+              
+              # Use perl for more reliable regex replacement with newlines
+              FORMULA_CONTENT=$(echo "$FORMULA_CONTENT" | perl -pe "s|$pattern|$replacement|gs")
+            fi
+          }
+          
+          # Update SHA for each platform/arch
+          update_sha "darwin" "amd64"
+          update_sha "darwin" "arm64"
+          update_sha "linux" "amd64"
+          update_sha "linux" "arm64"
+          
+          # Write the updated formula back to the file
+          echo "$FORMULA_CONTENT" > ${FORMULA_FILE}
+
+      - name: Commit and push changes
+        if: env.FORMULA_EXISTS == 'true'
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          
+          git add ${FORMULA_FILE}
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update ${FORMULA_FILE} to version ${VERSION}"
+            git push
+          fi 
