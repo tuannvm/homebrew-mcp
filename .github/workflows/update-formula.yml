@@ -91,27 +91,19 @@ jobs:
           # Download each asset and calculate SHA256
           for PLATFORM in "${PLATFORMS[@]}"; do
             for ARCH in "${ARCHES[@]}"; do
-              # Try different naming patterns until one works
-              PATTERNS=(
-                "${PACKAGE_NAME}_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
-                "${PACKAGE_NAME}-${VERSION}-${PLATFORM}-${ARCH}.tar.gz"
-                "${PACKAGE_NAME}-${PLATFORM}-${ARCH}.tar.gz"
-              )
+              # Build the filename based on the naming pattern in the formula
+              FILENAME="${PACKAGE_NAME}_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
+              DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/${FILENAME}"
+              echo "Trying: $DOWNLOAD_URL"
               
-              for FILENAME in "${PATTERNS[@]}"; do
-                DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/${FILENAME}"
-                echo "Trying: $DOWNLOAD_URL"
-                
-                if curl -L -f -o "$FILENAME" "$DOWNLOAD_URL"; then
-                  SHA=$(sha256sum "$FILENAME" | cut -d ' ' -f 1)
-                  echo "${PLATFORM}_${ARCH}_SHA=$SHA" >> $GITHUB_ENV
-                  echo "${PLATFORM}_${ARCH}_FILENAME=$FILENAME" >> $GITHUB_ENV
-                  echo "$PLATFORM $ARCH SHA: $SHA (File: $FILENAME)"
-                  break  # Found a working pattern, break the loop
-                else
-                  echo "Pattern $FILENAME not found"
-                fi
-              done
+              if curl -L -f -o "$FILENAME" "$DOWNLOAD_URL"; then
+                SHA=$(sha256sum "$FILENAME" | cut -d ' ' -f 1)
+                VAR_NAME="${PLATFORM}_${ARCH}_SHA"
+                echo "$VAR_NAME=$SHA" >> $GITHUB_ENV
+                echo "$PLATFORM $ARCH SHA: $SHA"
+              else
+                echo "::warning::Failed to download $FILENAME"
+              fi
             done
           done
 
@@ -131,46 +123,44 @@ jobs:
         run: |
           echo "Updating formula with version $VERSION"
           
-          # Update version number only - keep URLs dynamic with #{version}
+          # Make a backup of the original formula
+          cp ${FORMULA_FILE} ${FORMULA_FILE}.bak
+          
+          # Update version number only
           sed -i -E "s/version \"[0-9.]+\"/version \"${VERSION}\"/g" ${FORMULA_FILE}
           
-          # Function to update SHA256 for a platform/arch without changing the URL structure
-          update_sha() {
-            local platform=$1
-            local arch=$2
-            local sha_var="${platform}_${arch}_SHA"
-            
-            if [ -n "${!sha_var}" ]; then
-              echo "Updating SHA256 for ${platform}_${arch} to ${!sha_var}"
-              
-              # Debug output
-              echo "Looking for URL pattern: ${platform}_${arch}"
-              grep -E ".*${platform}.*${arch}.*tar\.gz" ${FORMULA_FILE} || echo "No match found for ${platform}_${arch}"
-              
-              # Only update the SHA256 value, preserving the dynamic URL with #{version}
-              if [[ "$platform" == "darwin" && "$arch" == "amd64" ]]; then
-                sed -i -E "/url.*darwin.*amd64.*tar\.gz/{n;s/sha256 \"[a-fA-F0-9]+\"/sha256 \"${!sha_var}\"/g;}" ${FORMULA_FILE}
-              elif [[ "$platform" == "darwin" && "$arch" == "arm64" ]]; then
-                sed -i -E "/url.*darwin.*arm64.*tar\.gz/{n;s/sha256 \"[a-fA-F0-9]+\"/sha256 \"${!sha_var}\"/g;}" ${FORMULA_FILE}
-              elif [[ "$platform" == "linux" && "$arch" == "amd64" ]]; then
-                sed -i -E "/url.*linux.*amd64.*tar\.gz/{n;s/sha256 \"[a-fA-F0-9]+\"/sha256 \"${!sha_var}\"/g;}" ${FORMULA_FILE}
-              elif [[ "$platform" == "linux" && "$arch" == "arm64" ]]; then
-                sed -i -E "/url.*linux.*arm64.*tar\.gz/{n;s/sha256 \"[a-fA-F0-9]+\"/sha256 \"${!sha_var}\"/g;}" ${FORMULA_FILE}
-              fi
-            else
-              echo "No SHA256 found for ${platform}_${arch}"
-            fi
-          }
+          # Print environment variables for debugging
+          echo "Environment variables containing SHA256 values:"
+          env | grep "_SHA="
           
-          # Update SHA256 for each platform/arch
-          update_sha "darwin" "amd64"
-          update_sha "darwin" "arm64"
-          update_sha "linux" "amd64"
-          update_sha "linux" "arm64"
+          # Update SHA256 values for each platform/arch
+          if [ -n "$darwin_amd64_SHA" ]; then
+            echo "Updating SHA256 for darwin_amd64"
+            sed -i -E "/url.*darwin.*amd64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$darwin_amd64_SHA\"/g;}" ${FORMULA_FILE}
+          fi
           
-          # Print the updated formula for verification
-          echo "Updated formula content:"
-          cat ${FORMULA_FILE}
+          if [ -n "$darwin_arm64_SHA" ]; then
+            echo "Updating SHA256 for darwin_arm64"
+            sed -i -E "/url.*darwin.*arm64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$darwin_arm64_SHA\"/g;}" ${FORMULA_FILE}
+          fi
+          
+          if [ -n "$linux_amd64_SHA" ]; then
+            echo "Updating SHA256 for linux_amd64"
+            sed -i -E "/url.*linux.*amd64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$linux_amd64_SHA\"/g;}" ${FORMULA_FILE}
+          fi
+          
+          if [ -n "$linux_arm64_SHA" ]; then
+            echo "Updating SHA256 for linux_arm64"
+            echo "Using sed -i -E '/url.*linux.*arm64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$linux_arm64_SHA\"/g;}' ${FORMULA_FILE}"
+            sed -i -E "/url.*linux.*arm64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$linux_arm64_SHA\"/g;}" ${FORMULA_FILE}
+          fi
+          
+          # Print diff to see changes
+          echo "Changes made to formula:"
+          diff ${FORMULA_FILE}.bak ${FORMULA_FILE} || true
+          
+          # Remove backup
+          rm ${FORMULA_FILE}.bak
 
       - name: Commit and push changes
         if: env.FORMULA_EXISTS == 'true'
