@@ -10,7 +10,7 @@ This repository contains Homebrew formulas for various MCP tools and utilities. 
 
 Currently, this tap provides the following formulas:
 
-- **mcp-trino**: A MCP server for interacting with Trino clusters.
+- **[mcp-trino](https://github.com/tuannvm/mcp-trino)**: A MCP server for interacting with Trino clusters.
 - *(More tools will be added in the future)*
 
 ## Using This Tap
@@ -92,6 +92,12 @@ To add a new formula to this tap:
 3. Ensure SHA256 checksums are correctly set for all binaries
 4. Test the formula before committing
 
-## License
+Here's the plan to enable Homebrew installation:
 
-All tools and formulas in this repository are licensed under the MIT License unless otherwise specified.
+1.  **Create the Homebrew Formula (`mcp-trino.rb`):**
+    *   Once the tap repository exists, I will create a Ruby file named `mcp-trino.rb` inside it.
+    *   This formula will tell Homebrew:
+        *   The project's description and homepage (`https://github.com/tuannvm/mcp-trino`).
+        *   How to download the correct `.tar.gz` archive for the user's OS (macOS/Linux) and architecture (amd64/arm64) from your GitHub Releases. It will automatically fetch the **latest** release version.
+        *   How to extract the `mcp-trino` binary from the archive.
+        *   Where to install the binary (Homebrew handles adding it to the PATH).
