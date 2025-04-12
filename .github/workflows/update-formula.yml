@@ -129,60 +129,46 @@ jobs:
       - name: Update formula
         if: env.FORMULA_EXISTS == 'true'
         run: |
-          # Read the formula file
-          FORMULA_CONTENT=$(cat ${FORMULA_FILE})
+          echo "Updating formula with version $VERSION"
           
-          # Update version
-          FORMULA_CONTENT=$(echo "$FORMULA_CONTENT" | sed -E "s/version \"[0-9.]+\"/version \"${VERSION}\"/g")
+          # Update version number only - keep URLs dynamic with #{version}
+          sed -i -E "s/version \"[0-9.]+\"/version \"${VERSION}\"/g" ${FORMULA_FILE}
           
-          # Function to update SHA for a platform/arch
+          # Function to update SHA256 for a platform/arch without changing the URL structure
           update_sha() {
             local platform=$1
             local arch=$2
             local sha_var="${platform}_${arch}_SHA"
-            local filename_var="${platform}_${arch}_FILENAME"
             
             if [ -n "${!sha_var}" ]; then
-              echo "Updating SHA for ${platform}_${arch} to ${!sha_var}"
+              echo "Updating SHA256 for ${platform}_${arch} to ${!sha_var}"
               
-              # More specific pattern that matches the exact URL and SHA256 structure
-              # Using cat with a grep filter to debug what we're trying to match
-              cat ${FORMULA_FILE} | grep -E "url.*${platform}.*${arch}.*tar\.gz" || echo "No match found for ${platform}_${arch}"
+              # Debug output
+              echo "Looking for URL pattern: ${platform}_${arch}"
+              grep -E ".*${platform}.*${arch}.*tar\.gz" ${FORMULA_FILE} || echo "No match found for ${platform}_${arch}"
               
-              # Create a more specific pattern for each platform/arch
+              # Only update the SHA256 value, preserving the dynamic URL with #{version}
               if [[ "$platform" == "darwin" && "$arch" == "amd64" ]]; then
-                sed -i -E "s|(url \".*darwin.*amd64.*tar\.gz\".*sha256 \")[a-fA-F0-9]+(\")|\1${darwin_amd64_SHA}\2|g" ${FORMULA_FILE}
+                sed -i -E "/url.*darwin.*amd64.*tar\.gz/{n;s/sha256 \"[a-fA-F0-9]+\"/sha256 \"${!sha_var}\"/g;}" ${FORMULA_FILE}
               elif [[ "$platform" == "darwin" && "$arch" == "arm64" ]]; then
-                sed -i -E "s|(url \".*darwin.*arm64.*tar\.gz\".*sha256 \")[a-fA-F0-9]+(\")|\1${darwin_arm64_SHA}\2|g" ${FORMULA_FILE}
+                sed -i -E "/url.*darwin.*arm64.*tar\.gz/{n;s/sha256 \"[a-fA-F0-9]+\"/sha256 \"${!sha_var}\"/g;}" ${FORMULA_FILE}
               elif [[ "$platform" == "linux" && "$arch" == "amd64" ]]; then
-                sed -i -E "s|(url \".*linux.*amd64.*tar\.gz\".*sha256 \")[a-fA-F0-9]+(\")|\1${linux_amd64_SHA}\2|g" ${FORMULA_FILE}
+                sed -i -E "/url.*linux.*amd64.*tar\.gz/{n;s/sha256 \"[a-fA-F0-9]+\"/sha256 \"${!sha_var}\"/g;}" ${FORMULA_FILE}
               elif [[ "$platform" == "linux" && "$arch" == "arm64" ]]; then
-                sed -i -E "s|(url \".*linux.*arm64.*tar\.gz\".*sha256 \")[a-fA-F0-9]+(\")|\1${linux_arm64_SHA}\2|g" ${FORMULA_FILE}
+                sed -i -E "/url.*linux.*arm64.*tar\.gz/{n;s/sha256 \"[a-fA-F0-9]+\"/sha256 \"${!sha_var}\"/g;}" ${FORMULA_FILE}
               fi
-              
-              # Update the URL to use the new filename if it changed
-              if [ -n "${!filename_var}" ]; then
-                full_url="https://github.com/${GITHUB_REPO}/releases/latest/download/${!filename_var}"
-                if [[ "$platform" == "darwin" && "$arch" == "amd64" ]]; then
-                  sed -i -E "s|(url \")https://github.com/[^/]+/[^/]+/releases/latest/download/[^\"]+(\")|\1${full_url}\2|g" ${FORMULA_FILE}
-                elif [[ "$platform" == "darwin" && "$arch" == "arm64" ]]; then
-                  sed -i -E "s|(url \")https://github.com/[^/]+/[^/]+/releases/latest/download/[^\"]+(\")|\1${full_url}\2|g" ${FORMULA_FILE}
-                elif [[ "$platform" == "linux" && "$arch" == "amd64" ]]; then
-                  sed -i -E "s|(url \")https://github.com/[^/]+/[^/]+/releases/latest/download/[^\"]+(\")|\1${full_url}\2|g" ${FORMULA_FILE}
-                elif [[ "$platform" == "linux" && "$arch" == "arm64" ]]; then
-                  sed -i -E "s|(url \")https://github.com/[^/]+/[^/]+/releases/latest/download/[^\"]+(\")|\1${full_url}\2|g" ${FORMULA_FILE}
-                fi
-              fi
+            else
+              echo "No SHA256 found for ${platform}_${arch}"
             fi
           }
           
-          # Update SHA for each platform/arch
+          # Update SHA256 for each platform/arch
           update_sha "darwin" "amd64"
           update_sha "darwin" "arm64"
           update_sha "linux" "amd64"
           update_sha "linux" "arm64"
           
-          # Print the updated formula
+          # Print the updated formula for verification
           echo "Updated formula content:"
           cat ${FORMULA_FILE}
 
