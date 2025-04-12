@@ -32,6 +32,9 @@ brew tap tuannvm/mcp
 After adding the tap, you can install any of the available tools:
 
 ```bash
+# Always update taps first to get the latest formulas
+brew update
+
 # Install mcp-trino
 brew install mcp-trino
 
@@ -52,6 +55,24 @@ brew upgrade mcp-trino
 
 # Upgrade all tools from this tap
 brew upgrade $(brew list --full-name | grep tuannvm/mcp/)
+```
+
+### Troubleshooting
+
+If you encounter a SHA256 mismatch error like this:
+
+```
+Error: mcp-trino: SHA256 mismatch
+Expected: [old-value]
+  Actual: [new-value]
+```
+
+The formula in your local Homebrew installation is outdated. Run:
+
+```bash
+brew update && brew upgrade
+# Or force reinstall:
+brew reinstall mcp-trino
 ```
 
 ## Supported Platforms
