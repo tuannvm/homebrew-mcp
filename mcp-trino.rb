@@ -15,22 +15,22 @@ class McpTrino < Formula
 
   on_macos do
     on_intel do
-      url "https://github.com/tuannvm/mcp-trino/releases/latest/download/mcp-trino_#{version}_darwin_amd64.tar.gz"
+      url "https://github.com/tuannvm/mcp-trino/releases/latest/download/mcp-trino_1.2.0_linux_arm64.tar.gz"
       sha256 "0000000000000000000000000000000000000000000000000000000000000000" # Placeholder SHA256
     end
     on_arm do
-      url "https://github.com/tuannvm/mcp-trino/releases/latest/download/mcp-trino_#{version}_darwin_arm64.tar.gz"
+      url "https://github.com/tuannvm/mcp-trino/releases/latest/download/mcp-trino_1.2.0_linux_arm64.tar.gz"
       sha256 "0000000000000000000000000000000000000000000000000000000000000000" # Placeholder SHA256
     end
   end
 
   on_linux do
     on_intel do
-      url "https://github.com/tuannvm/mcp-trino/releases/latest/download/mcp-trino_#{version}_linux_amd64.tar.gz"
+      url "https://github.com/tuannvm/mcp-trino/releases/latest/download/mcp-trino_1.2.0_linux_arm64.tar.gz"
       sha256 "0000000000000000000000000000000000000000000000000000000000000000" # Placeholder SHA256
     end
     on_arm do
-      url "https://github.com/tuannvm/mcp-trino/releases/latest/download/mcp-trino_#{version}_linux_arm64.tar.gz"
+      url "https://github.com/tuannvm/mcp-trino/releases/latest/download/mcp-trino_1.2.0_linux_arm64.tar.gz"
       sha256 "0000000000000000000000000000000000000000000000000000000000000000" # Placeholder SHA256
     end
   end
