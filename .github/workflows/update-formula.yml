@@ -131,14 +131,31 @@ jobs:
             version = ENV["VERSION"]
             github_repo = ENV["GITHUB_REPO"]
             
+            if package_name.nil? || package_name.empty?
+              abort "Error: PACKAGE_NAME environment variable is not set or empty"
+            end
+            
+            if version.nil? || version.empty?
+              abort "Error: VERSION environment variable is not set or empty"
+            end
+            
+            if github_repo.nil? || github_repo.empty?
+              abort "Error: GITHUB_REPO environment variable is not set or empty"
+            end
+            
             # Convert package name to class name (camel case)
             class_name = package_name.gsub(/(^|-)([a-z])/) { $2.upcase }
             
             # Get SHA values from environment
-            darwin_arm64_sha = ENV["darwin_arm64_SHA"]
-            darwin_amd64_sha = ENV["darwin_amd64_SHA"] 
-            linux_arm64_sha = ENV["linux_arm64_SHA"]
-            linux_amd64_sha = ENV["linux_amd64_SHA"]
+            darwin_arm64_sha = ENV["darwin_arm64_SHA"] || "00000000000000000000000000000000000000000000000000000000000000000"
+            darwin_amd64_sha = ENV["darwin_amd64_SHA"] || "00000000000000000000000000000000000000000000000000000000000000000"
+            linux_arm64_sha = ENV["linux_arm64_SHA"] || "00000000000000000000000000000000000000000000000000000000000000000"
+            linux_amd64_sha = ENV["linux_amd64_SHA"] || "00000000000000000000000000000000000000000000000000000000000000000"
+            
+            # Check if at least one SHA is available
+            if [darwin_arm64_sha, darwin_amd64_sha, linux_arm64_sha, linux_amd64_sha].all? { |sha| sha == "00000000000000000000000000000000000000000000000000000000000000000" }
+              puts "Warning: No SHA256 values were found. Using placeholders."
+            end
             
             template = <<-ERB
             class <%= class_name %> < Formula
@@ -174,13 +191,18 @@ jobs:
               end
             
               test do
-                system "#{bin}/<%= package_name %>", "--version"
+                system "\#{bin}/<%= package_name %>", "--version"
               end
             end
             ERB
             
-            result = ERB.new(template, trim_mode: "-").result(binding)
-            File.write(ENV["FORMULA_FILE"], result)
+            begin
+              result = ERB.new(template, trim_mode: "-").result(binding)
+              File.write(ENV["FORMULA_FILE"], result)
+              puts "Formula created successfully"
+            rescue => e
+              abort "Error generating formula: #{e.message}\n#{e.backtrace.join("\n")}"
+            end
           '
           
           echo "Created new formula file at ${FORMULA_FILE}"
