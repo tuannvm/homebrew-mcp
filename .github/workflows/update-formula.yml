@@ -118,6 +118,74 @@ jobs:
             echo "::warning::Formula file ${{ env.FORMULA_FILE }} does not exist"
           fi
 
+      - name: Create formula if not exists
+        if: env.FORMULA_EXISTS == 'false'
+        run: |
+          echo "Creating new formula file for ${{ env.PACKAGE_NAME }} version $VERSION"
+          
+          # Create formula using Ruby script for better readability
+          ruby -e '
+            require "erb"
+            
+            package_name = ENV["PACKAGE_NAME"]
+            version = ENV["VERSION"]
+            github_repo = ENV["GITHUB_REPO"]
+            
+            # Convert package name to class name (camel case)
+            class_name = package_name.gsub(/(^|-)([a-z])/) { $2.upcase }
+            
+            # Get SHA values from environment
+            darwin_arm64_sha = ENV["darwin_arm64_SHA"]
+            darwin_amd64_sha = ENV["darwin_amd64_SHA"] 
+            linux_arm64_sha = ENV["linux_arm64_SHA"]
+            linux_amd64_sha = ENV["linux_amd64_SHA"]
+            
+            template = <<-ERB
+            class <%= class_name %> < Formula
+              desc "<%= package_name %> - Add description here"
+              homepage "https://github.com/<%= github_repo %>"
+              version "<%= version %>"
+              license "Apache-2.0"
+            
+              on_macos do
+                on_arm do
+                  url "https://github.com/<%= github_repo %>/releases/download/v<%= version %>/<%= package_name %>_<%= version %>_darwin_arm64.tar.gz"
+                  sha256 "<%= darwin_arm64_sha %>"
+                end
+                on_intel do
+                  url "https://github.com/<%= github_repo %>/releases/download/v<%= version %>/<%= package_name %>_<%= version %>_darwin_amd64.tar.gz"
+                  sha256 "<%= darwin_amd64_sha %>"
+                end
+              end
+            
+              on_linux do
+                on_arm do
+                  url "https://github.com/<%= github_repo %>/releases/download/v<%= version %>/<%= package_name %>_<%= version %>_linux_arm64.tar.gz"
+                  sha256 "<%= linux_arm64_sha %>"
+                end
+                on_intel do
+                  url "https://github.com/<%= github_repo %>/releases/download/v<%= version %>/<%= package_name %>_<%= version %>_linux_amd64.tar.gz"
+                  sha256 "<%= linux_amd64_sha %>"
+                end
+              end
+            
+              def install
+                bin.install "<%= package_name %>"
+              end
+            
+              test do
+                system "#{bin}/<%= package_name %>", "--version"
+              end
+            end
+            ERB
+            
+            result = ERB.new(template, trim_mode: "-").result(binding)
+            File.write(ENV["FORMULA_FILE"], result)
+          '
+          
+          echo "Created new formula file at ${FORMULA_FILE}"
+          cat ${FORMULA_FILE}
+
       - name: Update formula
         if: env.FORMULA_EXISTS == 'true'
         run: |
@@ -163,16 +231,22 @@ jobs:
           rm ${FORMULA_FILE}.bak
 
       - name: Commit and push changes
-        if: env.FORMULA_EXISTS == 'true'
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           
           git add ${FORMULA_FILE}
           
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
+          if [ "${{ env.FORMULA_EXISTS }}" == "true" ]; then
+            # For updating existing formula
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+              exit 0
+            fi
             git commit -m "Update ${FORMULA_FILE} to version ${VERSION}"
-            git push
-          fi 
+          else
+            # For new formula
+            git commit -m "Create new formula ${FORMULA_FILE} for version ${VERSION}"
+          fi
+          
+          git push
