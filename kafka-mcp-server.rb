@@ -1,28 +1,28 @@
   class KafkaMcpServer < Formula
     desc "kafka-mcp-server - Add description here"
     homepage "https://github.com/tuannvm/kafka-mcp-server"
-    version "1.0.0"
+    version "1.0.2"
     license "Apache-2.0"
   
     on_macos do
       on_arm do
         url "https://github.com/tuannvm/kafka-mcp-server/releases/download/v1.0.0/kafka-mcp-server_1.0.0_darwin_arm64.tar.gz"
-        sha256 "433b3ed255cd3590c339e7b865932b868aa2497a773b85419565416b7863c937"
+        sha256 "e24f047af2f9f33e7f5f6b4b656bbfd1a375140d7ca999619d53a06d1997f1af"
       end
       on_intel do
         url "https://github.com/tuannvm/kafka-mcp-server/releases/download/v1.0.0/kafka-mcp-server_1.0.0_darwin_amd64.tar.gz"
-        sha256 "7e4051b1c4224b05696cb5fad7e6d3aee78b7f55edf101c0afa1a5986134ce55"
+        sha256 "826f32d9a0bbf197d500cc0712e7ec78047da7fef7c0b220b8051f6a44545b50"
       end
     end
   
     on_linux do
       on_arm do
         url "https://github.com/tuannvm/kafka-mcp-server/releases/download/v1.0.0/kafka-mcp-server_1.0.0_linux_arm64.tar.gz"
-        sha256 "5e4d57afbf2c895aa40eec985a742a52f1a5df865d912e852f9ae182e6788617"
+        sha256 "a5b2d98ed6cf3b0b4575ec79009cd42e818d649b301fae2c028e10156b3c9afd"
       end
       on_intel do
         url "https://github.com/tuannvm/kafka-mcp-server/releases/download/v1.0.0/kafka-mcp-server_1.0.0_linux_amd64.tar.gz"
-        sha256 "89db569db6ccbda487c9d6e8c0342e93c0681a4af6ab85f735b26b269515d46f"
+        sha256 "81e66ed1d1ee99383b4878ea29eca9faef7363da1f1d049b6d974dced6d8f467"
       end
     end
   
