@@ -1,28 +1,28 @@
   class HaproxyMcpServer < Formula
     desc "haproxy-mcp-server - Add description here"
     homepage "https://github.com/tuannvm/haproxy-mcp-server"
-    version "1.0.10"
+    version "1.0.11"
     license "Apache-2.0"
   
     on_macos do
       on_arm do
         url "https://github.com/tuannvm/haproxy-mcp-server/releases/download/v1.0.0/haproxy-mcp-server_1.0.0_darwin_arm64.tar.gz"
-        sha256 "200a25d232f86f84e4f152507d7215c6fc2873e88bafdf39e93152138d004d93"
+        sha256 "8358a378e204743dc94721fe9703d4611a5a54be2e174571cdf9f958b55117f5"
       end
       on_intel do
         url "https://github.com/tuannvm/haproxy-mcp-server/releases/download/v1.0.0/haproxy-mcp-server_1.0.0_darwin_amd64.tar.gz"
-        sha256 "14e96b414921af277b45347f335489a1536fa434e0dd338636b520a49db7f1b5"
+        sha256 "27fd841465351de5a692bed38d86905cf9465bf76222f7784bb0d0d20e847810"
       end
     end
   
     on_linux do
       on_arm do
         url "https://github.com/tuannvm/haproxy-mcp-server/releases/download/v1.0.0/haproxy-mcp-server_1.0.0_linux_arm64.tar.gz"
-        sha256 "316488eade592bbe6ca1fa8bb81adcd8756cdcde90c030f6a3636fc86c4392dd"
+        sha256 "7a19737fd2ccf93baeb6fb6f5c02d2836002fd85db59a5100f7227b373759c79"
       end
       on_intel do
         url "https://github.com/tuannvm/haproxy-mcp-server/releases/download/v1.0.0/haproxy-mcp-server_1.0.0_linux_amd64.tar.gz"
-        sha256 "342ea916d29861595a45fdde19874e315b97c0d3f0f59e79e9e80a5988d92481"
+        sha256 "9286af79f64092e0aedfdb7823dc4ccb68c5aadb4b1345aa6e273979df4ce2c4"
       end
     end
   
