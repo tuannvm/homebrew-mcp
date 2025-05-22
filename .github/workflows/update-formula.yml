@@ -216,8 +216,11 @@ jobs:
           # Make a backup of the original formula
           cp ${FORMULA_FILE} ${FORMULA_FILE}.bak
           
-          # Update version number only
+          # Update version number in version string
           sed -i -E "s/version \"[0-9.]+\"/version \"${VERSION}\"/g" ${FORMULA_FILE}
+          
+          # Update version in URLs (match pattern: /releases/download/vX.Y.Z/..._X.Y.Z_...)
+          sed -i -E "s|(releases/download/v)[0-9]+\.[0-9]+\.[0-9]+/.*_([0-9]+\.[0-9]+\.[0-9]+)_|\1${VERSION}/\2_${VERSION}_|g" ${FORMULA_FILE}
           
           # Print environment variables for debugging
           echo "Environment variables containing SHA256 values:"
