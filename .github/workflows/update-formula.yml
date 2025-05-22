@@ -219,8 +219,11 @@ jobs:
           # Update version number in version string
           sed -i -E "s/version \"[0-9.]+\"/version \"${VERSION}\"/g" ${FORMULA_FILE}
           
-          # Update version in URLs (match pattern: /releases/download/vX.Y.Z/..._X.Y.Z_...)
-          sed -i -E "s|(releases/download/v)[0-9]+\.[0-9]+\.[0-9]+/.*_([0-9]+\.[0-9]+\.[0-9]+)_|\1${VERSION}/\2_${VERSION}_|g" ${FORMULA_FILE}
+          # Update version in URLs to match pattern: kafka-mcp-server_X.Y.Z_os_arch.tar.gz
+          # First update the version in the URL path
+          sed -i '' -E "s|(releases\/download\/v)[0-9]+\.[0-9]+\.[0-9]+\/|\1${VERSION}/|g" ${FORMULA_FILE}
+          # Then update the version in the filename (kafka-mcp-server_X.Y.Z_os_arch.tar.gz)
+          sed -i '' -E "s|(kafka-mcp-server_)[0-9]+\.[0-9]+\.[0-9]+_|\1${VERSION}_|g" ${FORMULA_FILE}
           
           # Print environment variables for debugging
           echo "Environment variables containing SHA256 values:"
