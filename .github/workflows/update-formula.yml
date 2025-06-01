@@ -65,7 +65,7 @@ jobs:
 
       - name: Get latest release info
         id: release
-        uses: pozetroninc/github-action-get-latest-release@master
+        uses: pozetroninc/github-action-get-latest-release@v1
         with:
           repository: ${{ env.GITHUB_REPO }}
           excludes: prerelease, draft
@@ -96,13 +96,20 @@ jobs:
               DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/${FILENAME}"
               echo "Trying: $DOWNLOAD_URL"
               
-              if curl -L -f -o "$FILENAME" "$DOWNLOAD_URL"; then
+              VAR_NAME="${PLATFORM}_${ARCH}_SHA" # Define VAR_NAME before curl
+
+              # Attempt download
+              curl -L -o "$FILENAME" "$DOWNLOAD_URL"
+              CURL_EXIT_CODE=$?
+
+              if [ $CURL_EXIT_CODE -eq 0 ]; then
                 SHA=$(sha256sum "$FILENAME" | cut -d ' ' -f 1)
-                VAR_NAME="${PLATFORM}_${ARCH}_SHA"
                 echo "$VAR_NAME=$SHA" >> $GITHUB_ENV
                 echo "$PLATFORM $ARCH SHA: $SHA"
               else
-                echo "::warning::Failed to download $FILENAME"
+                echo "::error::Failed to download $FILENAME (Exit code: $CURL_EXIT_CODE). URL: $DOWNLOAD_URL"
+                # Ensure the variable is cleared or not set if the download failed
+                echo "$VAR_NAME=" >> $GITHUB_ENV # Explicitly set to empty
               fi
             done
           done
@@ -221,9 +228,9 @@ jobs:
           
           # Update version in URLs to match pattern: kafka-mcp-server_X.Y.Z_os_arch.tar.gz
           # First update the version in the URL path
-          sed -i '' -E "s|(releases\/download\/v)[0-9]+\.[0-9]+\.[0-9]+\/|\1${VERSION}/|g" ${FORMULA_FILE}
-          # Then update the version in the filename (kafka-mcp-server_X.Y.Z_os_arch.tar.gz)
-          sed -i '' -E "s|(kafka-mcp-server_)[0-9]+\.[0-9]+\.[0-9]+_|\1${VERSION}_|g" ${FORMULA_FILE}
+          sed -i -E "s|(releases\/download\/v)[0-9]+\.[0-9]+\.[0-9]+\/|\1${VERSION}/|g" ${FORMULA_FILE}
+          # Then update the version in the filename (e.g., package-name_X.Y.Z_os_arch.tar.gz)
+          sed -i -E "s|(${PACKAGE_NAME}_)[0-9]+\.[0-9]+\.[0-9]+_|\1${VERSION}_|g" ${FORMULA_FILE}
           
           # Print environment variables for debugging
           echo "Environment variables containing SHA256 values:"
@@ -231,24 +238,31 @@ jobs:
           
           # Update SHA256 values for each platform/arch
           if [ -n "$darwin_amd64_SHA" ]; then
-            echo "Updating SHA256 for darwin_amd64"
-            sed -i -E "/url.*darwin.*amd64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$darwin_amd64_SHA\"/g;}" ${FORMULA_FILE}
+            echo "Updating SHA256 for darwin_amd64 with value $darwin_amd64_SHA"
+            sed -i -E "/url.*darwin.*amd64/{n;s/sha256 \"[0-9a-f]{64}\"/sha256 \"$darwin_amd64_SHA\"/g;}" ${FORMULA_FILE}
+          else
+            echo "::warning::SHA256 for darwin_amd64 is missing (download may have failed). Skipping update for this platform/architecture. The existing SHA in the formula will be retained."
           fi
           
           if [ -n "$darwin_arm64_SHA" ]; then
-            echo "Updating SHA256 for darwin_arm64"
-            sed -i -E "/url.*darwin.*arm64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$darwin_arm64_SHA\"/g;}" ${FORMULA_FILE}
+            echo "Updating SHA256 for darwin_arm64 with value $darwin_arm64_SHA"
+            sed -i -E "/url.*darwin.*arm64/{n;s/sha256 \"[0-9a-f]{64}\"/sha256 \"$darwin_arm64_SHA\"/g;}" ${FORMULA_FILE}
+          else
+            echo "::warning::SHA256 for darwin_arm64 is missing (download may have failed). Skipping update for this platform/architecture. The existing SHA in the formula will be retained."
           fi
           
           if [ -n "$linux_amd64_SHA" ]; then
-            echo "Updating SHA256 for linux_amd64"
-            sed -i -E "/url.*linux.*amd64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$linux_amd64_SHA\"/g;}" ${FORMULA_FILE}
+            echo "Updating SHA256 for linux_amd64 with value $linux_amd64_SHA"
+            sed -i -E "/url.*linux.*amd64/{n;s/sha256 \"[0-9a-f]{64}\"/sha256 \"$linux_amd64_SHA\"/g;}" ${FORMULA_FILE}
+          else
+            echo "::warning::SHA256 for linux_amd64 is missing (download may have failed). Skipping update for this platform/architecture. The existing SHA in the formula will be retained."
           fi
           
           if [ -n "$linux_arm64_SHA" ]; then
-            echo "Updating SHA256 for linux_arm64"
-            echo "Using sed -i -E '/url.*linux.*arm64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$linux_arm64_SHA\"/g;}' ${FORMULA_FILE}"
-            sed -i -E "/url.*linux.*arm64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$linux_arm64_SHA\"/g;}" ${FORMULA_FILE}
+            echo "Updating SHA256 for linux_arm64 with value $linux_arm64_SHA"
+            sed -i -E "/url.*linux.*arm64/{n;s/sha256 \"[0-9a-f]{64}\"/sha256 \"$linux_arm64_SHA\"/g;}" ${FORMULA_FILE}
+          else
+            echo "::warning::SHA256 for linux_arm64 is missing (download may have failed). Skipping update for this platform/architecture. The existing SHA in the formula will be retained."
           fi
           
           # Print diff to see changes
