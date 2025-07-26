@@ -13,8 +13,6 @@ on:
         default: 'mcp-trino.rb'
   repository_dispatch:
     types: [update-formula]
-  release:
-    types: [published]  # Trigger on new releases
 
 jobs:
   update-formula:
@@ -23,15 +21,9 @@ jobs:
       contents: write  # Needed for pushing changes
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.0'
-          bundler-cache: true
 
       - name: Determine repository and formula
         id: determine-info
@@ -43,15 +35,31 @@ jobs:
           
           # For repository_dispatch, use provided data if available
           elif [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
-            GITHUB_REPO="${{ github.event.client_payload.repository || 'tuannvm/mcp-trino' }}"
-            FORMULA_FILE="${{ github.event.client_payload.formula || 'mcp-trino.rb' }}"
+            GITHUB_REPO="${{ github.event.client_payload.repository }}"
+            FORMULA_FILE="${{ github.event.client_payload.formula }}"
+            
+            # Set defaults if not provided in payload
+            if [[ -z "$GITHUB_REPO" ]]; then
+              GITHUB_REPO="tuannvm/mcp-trino"
+            fi
+            if [[ -z "$FORMULA_FILE" ]]; then
+              FORMULA_FILE="mcp-trino.rb"
+            fi
           
-          # For release event, determine from release repository
-          elif [[ "${{ github.event_name }}" == "release" ]]; then
-            GITHUB_REPO="${{ github.repository }}"
-            # Extract the package name from repository (e.g., mcp-trino from tuannvm/mcp-trino)
-            PACKAGE_NAME=$(echo "$GITHUB_REPO" | cut -d'/' -f2)
-            FORMULA_FILE="${PACKAGE_NAME}.rb"
+          else
+            echo "::error::Unsupported event type: ${{ github.event_name }}"
+            exit 1
+          fi
+          
+          # Validate inputs
+          if [[ -z "$GITHUB_REPO" ]]; then
+            echo "::error::Repository not specified"
+            exit 1
+          fi
+          
+          if [[ -z "$FORMULA_FILE" ]]; then
+            echo "::error::Formula file not specified"
+            exit 1
           fi
           
           echo "GITHUB_REPO=$GITHUB_REPO" >> $GITHUB_ENV
@@ -65,10 +73,23 @@ jobs:
 
       - name: Get latest release info
         id: release
-        uses: pozetroninc/github-action-get-latest-release@master
-        with:
-          repository: ${{ env.GITHUB_REPO }}
-          excludes: prerelease, draft
+        run: |
+          echo "Fetching latest release for ${{ env.GITHUB_REPO }}..."
+          if ! LATEST_RELEASE=$(gh api repos/${{ env.GITHUB_REPO }}/releases/latest --jq '.tag_name' 2>/dev/null); then
+            echo "::error::Failed to fetch latest release for ${{ env.GITHUB_REPO }}"
+            echo "::error::Make sure the repository exists and has at least one published release"
+            exit 1
+          fi
+          
+          if [[ -z "$LATEST_RELEASE" ]]; then
+            echo "::error::No release tag found for ${{ env.GITHUB_REPO }}"
+            exit 1
+          fi
+          
+          echo "Latest release: $LATEST_RELEASE"
+          echo "release=$LATEST_RELEASE" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Set version
         id: version
@@ -88,24 +109,43 @@ jobs:
           PLATFORMS=("darwin" "linux")
           ARCHES=("amd64" "arm64")
           
+          SUCCESS_COUNT=0
+          TOTAL_COUNT=0
+          
           # Download each asset and calculate SHA256
           for PLATFORM in "${PLATFORMS[@]}"; do
             for ARCH in "${ARCHES[@]}"; do
-              # Build the filename based on the naming pattern in the formula
+              TOTAL_COUNT=$((TOTAL_COUNT + 1))
+              
+              # Build the filename based on the naming pattern
               FILENAME="${PACKAGE_NAME}_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
               DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/${FILENAME}"
-              echo "Trying: $DOWNLOAD_URL"
               
-              if curl -L -f -o "$FILENAME" "$DOWNLOAD_URL"; then
-                SHA=$(sha256sum "$FILENAME" | cut -d ' ' -f 1)
-                VAR_NAME="${PLATFORM}_${ARCH}_SHA"
-                echo "$VAR_NAME=$SHA" >> $GITHUB_ENV
-                echo "$PLATFORM $ARCH SHA: $SHA"
+              echo "Downloading: $DOWNLOAD_URL"
+              
+              if curl -L -f -s -o "$FILENAME" "$DOWNLOAD_URL"; then
+                # Verify the file was downloaded and has content
+                if [[ -s "$FILENAME" ]]; then
+                  SHA=$(sha256sum "$FILENAME" | cut -d ' ' -f 1)
+                  VAR_NAME="${PLATFORM}_${ARCH}_SHA"
+                  echo "$VAR_NAME=$SHA" >> $GITHUB_ENV
+                  echo "✓ $PLATFORM $ARCH: $SHA"
+                  SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+                else
+                  echo "::warning::Downloaded file $FILENAME is empty"
+                fi
               else
-                echo "::warning::Failed to download $FILENAME"
+                echo "::warning::Failed to download $FILENAME from $DOWNLOAD_URL"
               fi
             done
           done
+          
+          echo "Downloaded $SUCCESS_COUNT/$TOTAL_COUNT assets successfully"
+          
+          if [[ $SUCCESS_COUNT -eq 0 ]]; then
+            echo "::error::Failed to download any release assets. Check if the release exists and has the expected file naming pattern."
+            exit 1
+          fi
 
       - name: Check if formula exists
         id: check-formula
@@ -118,12 +158,27 @@ jobs:
             echo "::warning::Formula file ${{ env.FORMULA_FILE }} does not exist"
           fi
 
+      - name: Set up Ruby (for formula creation only)
+        if: env.FORMULA_EXISTS == 'false'
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: false
+
       - name: Create formula if not exists
         if: env.FORMULA_EXISTS == 'false'
         run: |
           echo "Creating new formula file for ${{ env.PACKAGE_NAME }} version $VERSION"
           
-          # Create formula using Ruby script for better readability
+          # Validate required environment variables
+          for var in PACKAGE_NAME VERSION GITHUB_REPO; do
+            if [[ -z "${!var}" ]]; then
+              echo "::error::$var environment variable is not set"
+              exit 1
+            fi
+          done
+          
+          # Create formula using Ruby script
           ruby -e '
             require "erb"
             
@@ -131,33 +186,22 @@ jobs:
             version = ENV["VERSION"]
             github_repo = ENV["GITHUB_REPO"]
             
-            if package_name.nil? || package_name.empty?
-              abort "Error: PACKAGE_NAME environment variable is not set or empty"
-            end
-            
-            if version.nil? || version.empty?
-              abort "Error: VERSION environment variable is not set or empty"
-            end
-            
-            if github_repo.nil? || github_repo.empty?
-              abort "Error: GITHUB_REPO environment variable is not set or empty"
-            end
-            
             # Convert package name to class name (camel case)
-            class_name = package_name.gsub(/(^|-)([a-z])/) { $2.upcase }
+            class_name = package_name.split("-").map(&:capitalize).join
             
-            # Get SHA values from environment
-            darwin_arm64_sha = ENV["darwin_arm64_SHA"] || "00000000000000000000000000000000000000000000000000000000000000000"
-            darwin_amd64_sha = ENV["darwin_amd64_SHA"] || "00000000000000000000000000000000000000000000000000000000000000000"
-            linux_arm64_sha = ENV["linux_arm64_SHA"] || "00000000000000000000000000000000000000000000000000000000000000000"
-            linux_amd64_sha = ENV["linux_amd64_SHA"] || "00000000000000000000000000000000000000000000000000000000000000000"
+            # Get SHA values from environment with fallback
+            darwin_arm64_sha = ENV["darwin_arm64_SHA"] || "0000000000000000000000000000000000000000000000000000000000000000"
+            darwin_amd64_sha = ENV["darwin_amd64_SHA"] || "0000000000000000000000000000000000000000000000000000000000000000"
+            linux_arm64_sha = ENV["linux_arm64_SHA"] || "0000000000000000000000000000000000000000000000000000000000000000"
+            linux_amd64_sha = ENV["linux_amd64_SHA"] || "0000000000000000000000000000000000000000000000000000000000000000"
             
-            # Check if at least one SHA is available
-            if [darwin_arm64_sha, darwin_amd64_sha, linux_arm64_sha, linux_amd64_sha].all? { |sha| sha == "00000000000000000000000000000000000000000000000000000000000000000" }
-              puts "Warning: No SHA256 values were found. Using placeholders."
+            # Warn if no real SHA values
+            valid_shas = [darwin_arm64_sha, darwin_amd64_sha, linux_arm64_sha, linux_amd64_sha]
+            if valid_shas.all? { |sha| sha.length != 64 || sha.match?(/^0+$/) }
+              puts "::warning::No valid SHA256 values found. Formula may not work until updated."
             end
             
-            template = <<-ERB
+            template = <<~ERB
             class <%= class_name %> < Formula
               desc "<%= package_name %> - Add description here"
               homepage "https://github.com/<%= github_repo %>"
@@ -191,90 +235,118 @@ jobs:
               end
             
               test do
-                system "\#{bin}/<%= package_name %>", "--version"
+                system "#{bin}/<%= package_name %>", "--version"
               end
             end
             ERB
             
             begin
-              result = ERB.new(template, trim_mode: "-").result(binding)
+              result = ERB.new(template).result(binding)
               File.write(ENV["FORMULA_FILE"], result)
-              puts "Formula created successfully"
+              puts "Formula created successfully at #{ENV["FORMULA_FILE"]}"
             rescue => e
-              abort "Error generating formula: #{e.message}\n#{e.backtrace.join("\n")}"
+              abort "Error generating formula: #{e.message}"
             end
           '
           
-          echo "Created new formula file at ${FORMULA_FILE}"
+          echo "Created new formula file:"
           cat ${FORMULA_FILE}
 
       - name: Update formula
         if: env.FORMULA_EXISTS == 'true'
         run: |
-          echo "Updating formula with version $VERSION"
+          echo "Updating formula $FORMULA_FILE with version $VERSION"
           
           # Make a backup of the original formula
-          cp ${FORMULA_FILE} ${FORMULA_FILE}.bak
+          cp "${FORMULA_FILE}" "${FORMULA_FILE}.bak"
           
-          # Update version number in version string
-          sed -i -E "s/version \"[0-9.]+\"/version \"${VERSION}\"/g" ${FORMULA_FILE}
+          # Update version number
+          sed -i -E "s/version \"[0-9]+\.[0-9]+\.[0-9]+\"/version \"${VERSION}\"/g" "${FORMULA_FILE}"
           
-          # Update version in URLs to match pattern: kafka-mcp-server_X.Y.Z_os_arch.tar.gz
-          # First update the version in the URL path
-          sed -i '' -E "s|(releases\/download\/v)[0-9]+\.[0-9]+\.[0-9]+\/|\1${VERSION}/|g" ${FORMULA_FILE}
-          # Then update the version in the filename (kafka-mcp-server_X.Y.Z_os_arch.tar.gz)
-          sed -i '' -E "s|(kafka-mcp-server_)[0-9]+\.[0-9]+\.[0-9]+_|\1${VERSION}_|g" ${FORMULA_FILE}
+          # Update version in URLs - generic pattern that works for any package
+          sed -i -E "s|(releases/download/v)[0-9]+\.[0-9]+\.[0-9]+/|\1${VERSION}/|g" "${FORMULA_FILE}"
+          sed -i -E "s|(${PACKAGE_NAME}_)[0-9]+\.[0-9]+\.[0-9]+_|\1${VERSION}_|g" "${FORMULA_FILE}"
           
-          # Print environment variables for debugging
-          echo "Environment variables containing SHA256 values:"
-          env | grep "_SHA="
+          # Update SHA256 values using a more robust approach
+          declare -A sha_updates=(
+            ["darwin_amd64"]="$darwin_amd64_SHA"
+            ["darwin_arm64"]="$darwin_arm64_SHA"
+            ["linux_amd64"]="$linux_amd64_SHA"
+            ["linux_arm64"]="$linux_arm64_SHA"
+          )
           
-          # Update SHA256 values for each platform/arch
-          if [ -n "$darwin_amd64_SHA" ]; then
-            echo "Updating SHA256 for darwin_amd64"
-            sed -i -E "/url.*darwin.*amd64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$darwin_amd64_SHA\"/g;}" ${FORMULA_FILE}
+          for platform_arch in "${!sha_updates[@]}"; do
+            sha_value="${sha_updates[$platform_arch]}"
+            if [[ -n "$sha_value" && "$sha_value" != "0000000000000000000000000000000000000000000000000000000000000000" ]]; then
+              # Split platform_arch into platform and arch
+              platform="${platform_arch%_*}"
+              arch="${platform_arch#*_}"
+              
+              echo "Updating SHA256 for $platform_arch: $sha_value"
+              
+              # Use a more precise sed pattern to avoid conflicts
+              if [[ "$arch" == "amd64" ]]; then
+                arch_pattern="amd64|intel"
+              else
+                arch_pattern="$arch"
+              fi
+              
+              sed -i -E "/url.*$platform.*($arch_pattern)/{n;s/sha256 \"[0-9a-f]{64}\"/sha256 \"$sha_value\"/g;}" "${FORMULA_FILE}"
+            else
+              echo "::warning::No valid SHA256 found for $platform_arch, skipping update"
+            fi
+          done
+          
+          # Verify the file was actually modified
+          if diff -q "${FORMULA_FILE}.bak" "${FORMULA_FILE}" >/dev/null; then
+            echo "::warning::No changes were made to the formula file"
+          else
+            echo "Changes made to formula:"
+            diff "${FORMULA_FILE}.bak" "${FORMULA_FILE}" || true
           fi
           
-          if [ -n "$darwin_arm64_SHA" ]; then
-            echo "Updating SHA256 for darwin_arm64"
-            sed -i -E "/url.*darwin.*arm64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$darwin_arm64_SHA\"/g;}" ${FORMULA_FILE}
+          # Validate the updated formula syntax
+          if command -v ruby >/dev/null 2>&1; then
+            echo "Validating Ruby syntax..."
+            if ruby -c "${FORMULA_FILE}" >/dev/null 2>&1; then
+              echo "✓ Formula syntax is valid"
+            else
+              echo "::error::Formula has syntax errors"
+              ruby -c "${FORMULA_FILE}"
+              exit 1
+            fi
           fi
-          
-          if [ -n "$linux_amd64_SHA" ]; then
-            echo "Updating SHA256 for linux_amd64"
-            sed -i -E "/url.*linux.*amd64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$linux_amd64_SHA\"/g;}" ${FORMULA_FILE}
-          fi
-          
-          if [ -n "$linux_arm64_SHA" ]; then
-            echo "Updating SHA256 for linux_arm64"
-            echo "Using sed -i -E '/url.*linux.*arm64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$linux_arm64_SHA\"/g;}' ${FORMULA_FILE}"
-            sed -i -E "/url.*linux.*arm64/{n;s/sha256 \"[0-9a-f]+\"/sha256 \"$linux_arm64_SHA\"/g;}" ${FORMULA_FILE}
-          fi
-          
-          # Print diff to see changes
-          echo "Changes made to formula:"
-          diff ${FORMULA_FILE}.bak ${FORMULA_FILE} || true
           
           # Remove backup
-          rm ${FORMULA_FILE}.bak
+          rm "${FORMULA_FILE}.bak"
 
       - name: Commit and push changes
         run: |
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
+          # Configure git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add ${FORMULA_FILE}
+          # Add the formula file
+          git add "${FORMULA_FILE}"
           
-          if [ "${{ env.FORMULA_EXISTS }}" == "true" ]; then
-            # For updating existing formula
-            if git diff --staged --quiet; then
-              echo "No changes to commit"
-              exit 0
-            fi
-            git commit -m "Update ${FORMULA_FILE} to version ${VERSION}"
-          else
-            # For new formula
-            git commit -m "Create new formula ${FORMULA_FILE} for version ${VERSION}"
+          # Check if there are any changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit for ${FORMULA_FILE}"
+            exit 0
           fi
           
+          # Create appropriate commit message
+          if [[ "${{ env.FORMULA_EXISTS }}" == "true" ]]; then
+            COMMIT_MSG="Update ${FORMULA_FILE} to version ${VERSION}"
+          else
+            COMMIT_MSG="Add ${FORMULA_FILE} formula for version ${VERSION}"
+          fi
+          
+          echo "Committing changes: $COMMIT_MSG"
+          git commit -m "$COMMIT_MSG"
+          
+          # Push changes
+          echo "Pushing changes to repository..."
           git push
+          
+          echo "✓ Successfully updated ${FORMULA_FILE} to version ${VERSION}"
