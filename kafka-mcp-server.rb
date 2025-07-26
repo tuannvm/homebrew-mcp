@@ -1,28 +1,28 @@
   class KafkaMcpServer < Formula
     desc "kafka-mcp-server - Add description here"
     homepage "https://github.com/tuannvm/kafka-mcp-server"
-    version "1.0.3"
+    version "1.0.5"
     license "Apache-2.0"
   
     on_macos do
       on_arm do
-        url "https://github.com/tuannvm/kafka-mcp-server/releases/download/v1.0.3/kafka-mcp-server_1.0.3_darwin_arm64.tar.gz"
-        sha256 "3c4d19889f136e5554dc15c7e86846f88b112aefce5654fdc291b1baffd5a3ea"
+        url "https://github.com/tuannvm/kafka-mcp-server/releases/download/v1.0.5/kafka-mcp-server_1.0.5_darwin_arm64.tar.gz"
+        sha256 "53c2dd0515a2e7e61eb83c9d86495c2b85aac2094d7e5c558660eaec59ef1428"
       end
       on_intel do
-        url "https://github.com/tuannvm/kafka-mcp-server/releases/download/v1.0.3/kafka-mcp-server_1.0.3_darwin_amd64.tar.gz"
-        sha256 "fa2714ec9d4a81e6f20f729b40390f3543675c180eca623f8f888cece2b2ea5d"
+        url "https://github.com/tuannvm/kafka-mcp-server/releases/download/v1.0.5/kafka-mcp-server_1.0.5_darwin_amd64.tar.gz"
+        sha256 "b2a26ef13f285bce5259c6e172cf3dd2eb0ea36b4844f14a6387b9306d4dbf2f"
       end
     end
   
     on_linux do
       on_arm do
-        url "https://github.com/tuannvm/kafka-mcp-server/releases/download/v1.0.3/kafka-mcp-server_1.0.3_linux_arm64.tar.gz"
-        sha256 "751a6aaec9fb09ccef884a9845a2b1275fd6cda87cb104ef79c2bf7fc2d3cb11"
+        url "https://github.com/tuannvm/kafka-mcp-server/releases/download/v1.0.5/kafka-mcp-server_1.0.5_linux_arm64.tar.gz"
+        sha256 "27a8b929f412b38b1609ee1555e1f6b9bce8a0f7a95352221651d4c6dba3c28d"
       end
       on_intel do
-        url "https://github.com/tuannvm/kafka-mcp-server/releases/download/v1.0.3/kafka-mcp-server_1.0.3_linux_amd64.tar.gz"
-        sha256 "91855cc129fa07a550db706c0cabe485c9cef892f767cc03935a7f42e0af8237"
+        url "https://github.com/tuannvm/kafka-mcp-server/releases/download/v1.0.5/kafka-mcp-server_1.0.5_linux_amd64.tar.gz"
+        sha256 "47fc063af304bdf895fd38a5ce4dabc2be11c6a67cf1aaff629e56ad7a5b542e"
       end
     end
   
