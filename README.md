@@ -11,7 +11,8 @@ This repository contains Homebrew formulas for various MCP tools and utilities. 
 Currently, this tap provides the following formulas:
 
 - **[mcp-trino](https://github.com/tuannvm/mcp-trino)**: A MCP server for interacting with Trino clusters.
-- *(More tools will be added in the future)*
+- **[haproxy-mcp-server](https://github.com/tuannvm/haproxy-mcp-server)**: A MCP server for HAProxy management and monitoring.
+- **[kafka-mcp-server](https://github.com/tuannvm/kafka-mcp-server)**: A MCP server for Apache Kafka cluster management.
 
 ## Using This Tap
 
@@ -38,8 +39,11 @@ brew update
 # Install mcp-trino
 brew install mcp-trino
 
-# Install other tools as they become available
-# brew install <tool-name>
+# Install haproxy-mcp-server
+brew install haproxy-mcp-server
+
+# Install kafka-mcp-server
+brew install kafka-mcp-server
 ```
 
 ### Updating
@@ -50,8 +54,10 @@ To update the formulas and tools:
 # Update Homebrew formulas
 brew update
 
-# Upgrade a specific tool
+# Upgrade specific tools
 brew upgrade mcp-trino
+brew upgrade haproxy-mcp-server
+brew upgrade kafka-mcp-server
 
 # Upgrade all tools from this tap
 brew upgrade $(brew list --full-name | grep tuannvm/mcp/)
@@ -71,8 +77,10 @@ The formula in your local Homebrew installation is outdated. Run:
 
 ```bash
 brew update && brew upgrade
-# Or force reinstall:
+# Or force reinstall specific tools:
 brew reinstall mcp-trino
+brew reinstall haproxy-mcp-server
+brew reinstall kafka-mcp-server
 ```
 
 ## Supported Platforms
