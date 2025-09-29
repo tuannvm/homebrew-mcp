@@ -5,7 +5,7 @@
 class McpTrino < Formula
   desc "MCP server for interacting with Trino clusters"
   homepage "https://github.com/tuannvm/mcp-trino"
-  version "3.1.0"
+  version "3.2.0"
   license "MIT"
   
   # Optional auto-update before installation
@@ -20,22 +20,22 @@ class McpTrino < Formula
   on_macos do
     on_intel do
       url "https://github.com/tuannvm/mcp-trino/releases/latest/download/mcp-trino_#{version}_darwin_amd64.tar.gz"
-      sha256 "f2fa1f0fdec7d522a61eecf0d45a1101109e35acbda94b955c506c88aba8e1b1"
+      sha256 "aa4c72bc95d74896b0bbcf38390a531bc31d62b15ee896297ccc30d299960f07"
     end
     on_arm do
       url "https://github.com/tuannvm/mcp-trino/releases/latest/download/mcp-trino_#{version}_darwin_arm64.tar.gz"
-      sha256 "2e2dd81afc5373ff9be936bcd87c5fac0ceaf912e30fa40fdd0cb6fe5b0a62bb"
+      sha256 "9cba9ed9dc80ee08badca5d2e779846466555d03ccc25d2b606d267464fdc436"
     end
   end
 
   on_linux do
     on_intel do
       url "https://github.com/tuannvm/mcp-trino/releases/latest/download/mcp-trino_#{version}_linux_amd64.tar.gz"
-      sha256 "9d3721d409ffbc2d1339f47470e985e4d312e9eb2ccd27d9d321242cf74df470"
+      sha256 "5307fc63c43e8f364e594c4b1fce4306b7f79bb4f3417a425a7c0319acb0bc95"
     end
     on_arm do
       url "https://github.com/tuannvm/mcp-trino/releases/latest/download/mcp-trino_#{version}_linux_arm64.tar.gz"
-      sha256 "ee730779bfda66234aba961d7641fdc3948711cd84e87b912e2936b2f29303f8"
+      sha256 "ae41b01cb09f903a7f83156b490a11923cb177387d95a6b23b66e7da4c14e24a"
     end
   end
 
