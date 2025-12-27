@@ -235,7 +235,7 @@ jobs:
               end
             
               test do
-                system "#{bin}/<%= package_name %>", "--version"
+                system bin/"<%= package_name %>", "--version"
               end
             end
             ERB
