@@ -1,28 +1,28 @@
 class Pagent < Formula
   desc "pagent - Add description here"
   homepage "https://github.com/tuannvm/pagent"
-  version "0.1.1"
+  version "0.1.2"
   license "Apache-2.0"
 
   on_macos do
     on_arm do
-      url "https://github.com/tuannvm/pagent/releases/download/v0.1.1/pagent_0.1.1_darwin_arm64.tar.gz"
-      sha256 "804975fd50cc0c011204314e7f545e066b894812bd6e5cb11da38cee98c4103a"
+      url "https://github.com/tuannvm/pagent/releases/download/v0.1.2/pagent_0.1.2_darwin_arm64.tar.gz"
+      sha256 "b2fa83c39e550e68b28f4278e5f2903d1b8eae359bb8414dcaa4054b3249d255"
     end
     on_intel do
-      url "https://github.com/tuannvm/pagent/releases/download/v0.1.1/pagent_0.1.1_darwin_amd64.tar.gz"
-      sha256 "d96f1a6e7381432c51a0132c0dd437b305a66cdb54f78d3dd19f58378c6e9e93"
+      url "https://github.com/tuannvm/pagent/releases/download/v0.1.2/pagent_0.1.2_darwin_amd64.tar.gz"
+      sha256 "61339b2ea3cca905bbe610408cf2ba394dc12ec2b0eea155d83dfc3100ab4154"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/tuannvm/pagent/releases/download/v0.1.1/pagent_0.1.1_linux_arm64.tar.gz"
-      sha256 "a3e1bdbb96c391c352c32d16a5b5b02993a5ff8ba61e78db9f25786f4477d192"
+      url "https://github.com/tuannvm/pagent/releases/download/v0.1.2/pagent_0.1.2_linux_arm64.tar.gz"
+      sha256 "696a67aa521e2e78aa8993e5f91bc931f2b548dbbdc913b592d70dbaa1eeb401"
     end
     on_intel do
-      url "https://github.com/tuannvm/pagent/releases/download/v0.1.1/pagent_0.1.1_linux_amd64.tar.gz"
-      sha256 "19ecc91c6d55dcae77e81c40492229432ab1d34cf7559ad89023b37d44266c12"
+      url "https://github.com/tuannvm/pagent/releases/download/v0.1.2/pagent_0.1.2_linux_amd64.tar.gz"
+      sha256 "840e89f7561401a96c13dcd3a348a32bb8a3de9c227a4ff805d3f80c0ab1a905"
     end
   end
 
