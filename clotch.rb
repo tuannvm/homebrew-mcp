@@ -1,29 +1,29 @@
 class Clotch < Formula
   desc "Dynamic Island monitor for Claude Code sessions"
   homepage "https://github.com/tuannvm/clotch"
-  version "0.0.2"
+  version "0.0.3"
   license "MIT"
 
   on_macos do
     on_arm do
-      url "https://github.com/tuannvm/clotch/releases/download/v0.0.2/clotch-island-v0.0.2-darwin-arm64.tar.gz"
-      sha256 "8efaa6232d9770c322a2c3ab78b70314c397912c58a1e614dd06a6ea876db736"
+      url "https://github.com/tuannvm/clotch/releases/download/v0.0.3/clotch-island-v0.0.3-darwin-arm64.tar.gz"
+      sha256 "01e4c89d9574464c5931d74e04cd6442a330e9f2dece4e168fdd36a227ebac6b"
 
       resource "clotch-agent" do
-        url "https://github.com/tuannvm/clotch/releases/download/v0.0.2/clotch-agent-v0.0.2-darwin-arm64.tar.gz"
-        sha256 "42a0b3319e7d4a6e93ccecc837d2883e82b11bedb7ee9d868f347586438af41e"
+        url "https://github.com/tuannvm/clotch/releases/download/v0.0.3/clotch-agent-v0.0.3-darwin-arm64.tar.gz"
+        sha256 "9560bdd4b83a2c34ec2c4269a6b019e5a5652a421f92d9749f04d9c890f40429"
       end
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/tuannvm/clotch/releases/download/v0.0.2/clotch-agent-v0.0.2-linux-arm64.tar.gz"
-      sha256 "0a310a9111f13ec848d165f4bd63173018115ee06dd46575d137a6e2d31e60b2"
+      url "https://github.com/tuannvm/clotch/releases/download/v0.0.3/clotch-agent-v0.0.3-linux-arm64.tar.gz"
+      sha256 "cc59759923c91508e27ec3479334a019e4dd92786e29179faa6b85090b604766"
     end
     on_intel do
-      url "https://github.com/tuannvm/clotch/releases/download/v0.0.2/clotch-agent-v0.0.2-linux-amd64.tar.gz"
-      sha256 "97e30080d80ece50c77e69baaeca8a226f724a69ddb979a0dffbc1274b896cfb"
+      url "https://github.com/tuannvm/clotch/releases/download/v0.0.3/clotch-agent-v0.0.3-linux-amd64.tar.gz"
+      sha256 "b153142ee64ddfab329b4c21ca07b9ba70a1a6c2e92ada3ed7b8f45008008518"
     end
   end
 
