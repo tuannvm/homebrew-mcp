@@ -1,8 +1,8 @@
 cask "clotch" do
-  version "0.1.4"
-  sha256 "419e721c92ceb6f284ec83bbb0a133302330d8979bf2fdcdb4023d6ebadb28cf"
+  version "0.2.0"
+  sha256 "f5fd51bb9acad501bcac4aac1f1e3f7732643dd1109fa7e9f28242e56fa22e5c"
 
-  url "https://github.com/tuannvm/clotch/releases/download/v0.1.4/Clotch-v0.1.4-darwin-arm64.zip"
+  url "https://github.com/tuannvm/clotch/releases/download/v0.2.0/Clotch-v0.2.0-darwin-arm64.zip"
   name "Clotch"
   desc "Dynamic Island monitor for Claude Code sessions"
   homepage "https://github.com/tuannvm/clotch"
@@ -10,12 +10,6 @@ cask "clotch" do
   depends_on formula: "tuannvm/mcp/clotch-agent"
 
   app "Clotch.app"
-
-  postflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-cr", "#{appdir}/Clotch.app"],
-                   sudo: false
-  end
 
   zap trash: [
     "~/.config/clotch/settings.json",
