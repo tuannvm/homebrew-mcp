@@ -1,8 +1,8 @@
 cask "clotch" do
-  version "0.2.7"
-  sha256 "3449675d41d29067a20e59623631edc3a01dcb9a2c6193a720d8824ae5fa3484"
+  version "0.2.8"
+  sha256 "5d95728e536ae473c45fc0f924fc95d439f627d7e739f131084803e5b7574bb2"
 
-  url "https://github.com/tuannvm/clotch/releases/download/v0.2.7/Clotch-v0.2.7-darwin-arm64.zip"
+  url "https://github.com/tuannvm/clotch/releases/download/v0.2.8/Clotch-v0.2.8-darwin-arm64.zip"
   name "Clotch"
   desc "Dynamic Island monitor for Claude Code sessions"
   homepage "https://github.com/tuannvm/clotch"
