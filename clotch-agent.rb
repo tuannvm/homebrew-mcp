@@ -1,24 +1,24 @@
 class ClotchAgent < Formula
   desc "Session scanner agent for Clotch"
   homepage "https://github.com/tuannvm/clotch"
-  version "0.2.15"
+  version "0.2.16"
   license "MIT"
 
   on_macos do
     on_arm do
-      url "https://github.com/tuannvm/clotch/releases/download/v0.2.15/clotch-agent-v0.2.15-darwin-arm64.tar.gz"
-      sha256 "4556fd9e6839855848f1b04282c331c7019d5b925428e606a9eb0b7ee22d7ecc"
+      url "https://github.com/tuannvm/clotch/releases/download/v0.2.16/clotch-agent-v0.2.16-darwin-arm64.tar.gz"
+      sha256 "bb816c0a2223b37b9b60d2445b47732a0dffa24b19403092aeed2f72afebc023"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/tuannvm/clotch/releases/download/v0.2.15/clotch-agent-v0.2.15-linux-arm64.tar.gz"
-      sha256 "c38ea046ced5464058b000e952689c6c94534044f553b63622464bef059266bf"
+      url "https://github.com/tuannvm/clotch/releases/download/v0.2.16/clotch-agent-v0.2.16-linux-arm64.tar.gz"
+      sha256 "e483e12bea78d4e34fe913f2ca1653a0793b778d49088147496943876d22e895"
     end
     on_intel do
-      url "https://github.com/tuannvm/clotch/releases/download/v0.2.15/clotch-agent-v0.2.15-linux-amd64.tar.gz"
-      sha256 "2598400c97a77aefd46d314972784676e11f8bb84d1b75a18d5b4acd4762b40d"
+      url "https://github.com/tuannvm/clotch/releases/download/v0.2.16/clotch-agent-v0.2.16-linux-amd64.tar.gz"
+      sha256 "19d8ea079ae03cfb935ff3724964f5295a563bc177a99c0f18ba02a6a9f1e5fc"
     end
   end
 
